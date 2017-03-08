@@ -260,7 +260,7 @@ class Uniform(Gaussian):
     #     raise NotImplementedError
 
     # def logli_prior(self, x_var):
-    #     # 
+    #     #
     #     raise NotImplementedError
 
     def sample_prior(self, batch_size):
@@ -397,7 +397,7 @@ class Product(Distribution):
         """
         Join the per component tensor variables into a whole tensor
         """
-        return tf.concat(1, xs)
+        return tf.concat(xs, 1)
 
     def split_dist_flat(self, dist_flat):
         """
@@ -434,13 +434,13 @@ class Product(Distribution):
         ret = []
         for dist_info_i, dist_i in zip(self.split_dist_info(dist_info), self.dists):
             ret.append(tf.cast(dist_i.sample(dist_info_i), tf.float32))
-        return tf.concat(1, ret)
+        return tf.concat(ret, 1)
 
     def sample_prior(self, batch_size):
         ret = []
         for dist_i in self.dists:
             ret.append(tf.cast(dist_i.sample_prior(batch_size), tf.float32))
-        return tf.concat(1, ret)
+        return tf.concat(ret, 1)
 
     def logli(self, x_var, dist_info):
         ret = tf.constant(0.)
