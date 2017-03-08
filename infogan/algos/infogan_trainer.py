@@ -205,11 +205,12 @@ class InfoGANTrainer(object):
             tf.image_summary("image_%d_%s" % (dist_idx, dist.__class__.__name__), imgs)
 
 
-    def train(self):
+    def train(self, restore_point=None):
 
         self.init_opt()
 
         init = tf.initialize_all_variables()
+        saver = tf.train.Saver()
 
         with tf.Session() as sess:
             sess.run(init)
@@ -217,9 +218,9 @@ class InfoGANTrainer(object):
             summary_op = tf.merge_all_summaries()
             summary_writer = tf.train.SummaryWriter(self.log_dir, sess.graph)
 
-            saver = tf.train.Saver()
-
-            counter = 0
+            if restore_point is not None:
+                saver.restore(sess, restore_point)
+                print("Model restored from {}.".format(restore_point))
 
             log_vars = [x for _, x in self.log_vars]
             log_keys = [x for x, _ in self.log_vars]
@@ -237,17 +238,16 @@ class InfoGANTrainer(object):
                     log_vals = sess.run([self.discriminator_trainer] + log_vars, feed_dict)[1:]
                     sess.run(self.generator_trainer, feed_dict)
                     all_log_vals.append(log_vals)
-                    counter += 1
 
-                    if counter % self.snapshot_interval == 0:
-                        snapshot_name = "%s_%s" % (self.exp_name, str(counter))
-                        fn = saver.save(sess, "%s/%s.ckpt" % (self.checkpoint_dir, snapshot_name))
-                        print("Model saved in file: %s" % fn)
+                # Save snapshot once per epoch.
+                snapshot_name = "%s" % (self.exp_name,)
+                fn = saver.save(sess, "%s/%s.ckpt" % (self.checkpoint_dir, snapshot_name))
+                print("Model saved in file: %s" % fn)
 
                 x, _ = self.dataset.train.next_batch(self.batch_size)
 
                 summary_str = sess.run(summary_op, {self.input_tensor: x})
-                summary_writer.add_summary(summary_str, counter)
+                summary_writer.add_summary(summary_str, epoch)
 
                 avg_log_vals = np.mean(np.array(all_log_vals), axis=0)
                 log_dict = dict(zip(log_keys, avg_log_vals))

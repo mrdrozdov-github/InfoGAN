@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from infogan.misc.distributions import Uniform, Categorical, Gaussian, MeanBernoulli
 
 import tensorflow as tf
+import sys
 import os
 from infogan.misc.datasets import MnistDataset
 from infogan.models.regularized_gan import RegularizedGAN
@@ -12,7 +13,16 @@ import dateutil
 import dateutil.tz
 import datetime
 
+import gflags
+
 if __name__ == "__main__":
+
+    FLAGS = gflags.FLAGS
+    gflags.DEFINE_string("restore_point", None, "(optional) Path to restore model from. ")
+    gflags.DEFINE_string("experiment_name", None, "Experiment name.")
+    gflags.DEFINE_integer("max_epoch", 1, "Number of training epochs.")
+
+    FLAGS(sys.argv)
 
     now = datetime.datetime.now(dateutil.tz.tzlocal())
     timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
@@ -21,12 +31,14 @@ if __name__ == "__main__":
     root_checkpoint_dir = "ckt/mnist"
     batch_size = 128
     updates_per_epoch = 100
-    max_epoch = 50
 
     exp_name = "mnist_%s" % timestamp
 
-    log_dir = os.path.join(root_log_dir, exp_name)
-    checkpoint_dir = os.path.join(root_checkpoint_dir, exp_name)
+    if FLAGS.experiment_name is None:
+        FLAGS.experiment_name = exp_name
+
+    log_dir = os.path.join(root_log_dir, FLAGS.experiment_name)
+    checkpoint_dir = os.path.join(root_checkpoint_dir, FLAGS.experiment_name)
 
     mkdir_p(log_dir)
     mkdir_p(checkpoint_dir)
@@ -52,14 +64,16 @@ if __name__ == "__main__":
         model=model,
         dataset=dataset,
         batch_size=batch_size,
-        exp_name=exp_name,
+        exp_name=FLAGS.experiment_name,
         log_dir=log_dir,
         checkpoint_dir=checkpoint_dir,
-        max_epoch=max_epoch,
+        max_epoch=FLAGS.max_epoch,
         updates_per_epoch=updates_per_epoch,
         info_reg_coeff=1.0,
         generator_learning_rate=1e-3,
         discriminator_learning_rate=2e-4,
     )
 
-    algo.train()
+    algo.train(
+        restore_point=FLAGS.restore_point,
+    )
